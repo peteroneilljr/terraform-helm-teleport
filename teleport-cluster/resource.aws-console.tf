@@ -1,0 +1,91 @@
+# https://goteleport.com/docs/enroll-resources/application-access/cloud-apis/aws-console/
+
+resource "aws_iam_role" "irsa_aws_console" {
+  name = "${local.teleport_cluster_name}-irsa-aws-console"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Federated = data.aws_iam_openid_connect_provider.oidc.arn
+      }
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "${replace(data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer, "https://", "")}:aud" = "sts.amazonaws.com",
+          "${replace(data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer, "https://", "")}:sub" = "system:serviceaccount:${kubernetes_namespace_v1.teleport_cluster.metadata[0].name}:${local.teleport_agent_name}"
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "irsa_aws_console" {
+  role       = aws_iam_role.irsa_aws_console.name
+  policy_arn = aws_iam_policy.irsa_aws_console.arn
+}
+
+resource "aws_iam_policy" "irsa_aws_console" {
+  name = "${local.teleport_cluster_name}-aws-console"
+
+  policy = <<EOF
+{ "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "${aws_iam_role.irsa_aws_console_ro.arn}"
+    }
+  ]
+}
+EOF
+}
+# ---------------------------------------------------------------------------- #
+# Read Only Role
+# ---------------------------------------------------------------------------- #
+resource "aws_iam_role" "irsa_aws_console_ro" {
+  name               = "${var.resource_prefix}aws-ro"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "AWS": "${aws_iam_role.irsa_aws_console.arn}"
+      }
+    }
+  ]
+}
+EOF
+}
+resource "aws_iam_role_policy_attachment" "irsa_aws_console_ro" {
+  role       = aws_iam_role.irsa_aws_console_ro.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
+
+# ---------------------------------------------------------------------------- #
+# Teleport Role
+# ---------------------------------------------------------------------------- #
+resource "kubectl_manifest" "teleport_role_aws_console" {
+  yaml_body = <<EOF
+apiVersion: resources.teleport.dev/v1
+kind: TeleportRoleV7
+metadata:
+  annotations:
+    teleport.dev/keep: "true"
+  finalizers:
+    - resources.teleport.dev/deletion
+  generation: 1
+  name: "${var.resource_prefix}aws-ro"
+  namespace: ${helm_release.teleport_cluster.namespace}
+spec:
+  allow:
+    app_labels:
+      app: aws
+    aws_role_arns:
+      - ${aws_iam_role.irsa_aws_console_ro.arn}
+EOF
+}
