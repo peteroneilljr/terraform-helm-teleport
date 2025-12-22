@@ -3,7 +3,7 @@ resource "helm_release" "grafana" {
   namespace  = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
   repository = "https://grafana.github.io/helm-charts"
   chart      = "grafana"
-  # version    = var.teleport_version
+  version    = "9.2.6"
 
   wait = true
 

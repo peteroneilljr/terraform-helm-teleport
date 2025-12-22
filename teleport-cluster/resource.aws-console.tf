@@ -21,13 +21,16 @@ resource "aws_iam_role" "irsa_aws_console" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "irsa_aws_console" {
+# ---------------------------------------------------------------------------- #
+# Read Only Role
+# ---------------------------------------------------------------------------- #
+resource "aws_iam_role_policy_attachment" "irsa_aws_console_ro_policy" {
   role       = aws_iam_role.irsa_aws_console.name
-  policy_arn = aws_iam_policy.irsa_aws_console.arn
+  policy_arn = aws_iam_policy.irsa_aws_console_sts_ro.arn
 }
 
-resource "aws_iam_policy" "irsa_aws_console" {
-  name = "${local.teleport_cluster_name}-aws-console"
+resource "aws_iam_policy" "irsa_aws_console_sts_ro" {
+  name = "${local.teleport_cluster_name}-aws-console-sts-ro"
 
   policy = <<EOF
 { "Version": "2012-10-17",
@@ -41,9 +44,11 @@ resource "aws_iam_policy" "irsa_aws_console" {
 }
 EOF
 }
-# ---------------------------------------------------------------------------- #
-# Read Only Role
-# ---------------------------------------------------------------------------- #
+resource "aws_iam_role_policy_attachment" "irsa_aws_console_ro" {
+  role       = aws_iam_role.irsa_aws_console_ro.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
+
 resource "aws_iam_role" "irsa_aws_console_ro" {
   name               = "${var.resource_prefix}aws-ro"
   assume_role_policy = <<EOF
@@ -61,10 +66,51 @@ resource "aws_iam_role" "irsa_aws_console_ro" {
 }
 EOF
 }
-resource "aws_iam_role_policy_attachment" "irsa_aws_console_ro" {
-  role       = aws_iam_role.irsa_aws_console_ro.name
-  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+# ---------------------------------------------------------------------------- #
+# Admin Role
+# ---------------------------------------------------------------------------- #
+resource "aws_iam_role" "irsa_aws_console_admin" {
+  name               = "${var.resource_prefix}aws-admin"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "AWS": "${aws_iam_role.irsa_aws_console.arn}"
+      }
+    }
+  ]
 }
+EOF
+}
+resource "aws_iam_role_policy_attachment" "irsa_aws_console_admin" {
+  role       = aws_iam_role.irsa_aws_console_admin.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
+resource "aws_iam_policy" "irsa_aws_console_sts_admin" {
+  name = "${local.teleport_cluster_name}-aws-console-sts-admin"
+
+  policy = <<EOF
+{ "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "${aws_iam_role.irsa_aws_console_admin.arn}"
+    }
+  ]
+}
+EOF
+}
+resource "aws_iam_role_policy_attachment" "irsa_aws_console_admin_policy" {
+  role       = aws_iam_role.irsa_aws_console.name
+  policy_arn = aws_iam_policy.irsa_aws_console_sts_admin.arn
+}
+
 
 # ---------------------------------------------------------------------------- #
 # Teleport Role
@@ -79,7 +125,7 @@ metadata:
   finalizers:
     - resources.teleport.dev/deletion
   generation: 1
-  name: "${var.resource_prefix}aws-ro"
+  name: "${var.resource_prefix}aws-console"
   namespace: ${helm_release.teleport_cluster.namespace}
 spec:
   allow:
@@ -87,5 +133,6 @@ spec:
       app: aws
     aws_role_arns:
       - ${aws_iam_role.irsa_aws_console_ro.arn}
+      - ${aws_iam_role.irsa_aws_console_admin.arn}
 EOF
 }

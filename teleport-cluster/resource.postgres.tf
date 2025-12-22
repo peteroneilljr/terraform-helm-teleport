@@ -96,12 +96,21 @@ resource "helm_release" "postgresql" {
   namespace  = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
   repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "postgresql"
-  version    = "16.7.4"
+  # version    = "latest"
 
   wait = false
 
   values = [
     <<EOF
+image:
+  registry: docker.io
+  repository: bitnamilegacy/postgresql
+  tag: latest
+volumePermissions:
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/os-shell
+    tag: latest
 tls:
   enabled: true
   preferServerCiphers: true
@@ -121,6 +130,11 @@ primary:
     - "-c ssl_ca_file=/opt/bitnami/postgresql/certs/ca.crt"
     - "-c ssl_cert_file=/opt/bitnami/postgresql/certs/tls.crt"
     - "-c ssl_key_file=/opt/bitnami/postgresql/certs/tls.key"
+
+  persistentVolumeClaimRetentionPolicy:
+    enabled: true
+    whenDeleted: Delete
+    whenScaled: Retain
 
 EOF
   ]

@@ -15,12 +15,13 @@ resource "kubectl_manifest" "sso_okta" {
         attributes_to_roles = [
           {
             name  = "groups"
-            value = "pon-okta-admin"
+            value = "teleport-admin"
             roles = [
               "editor",
               "access",
               "reviewer",
-              "${var.resource_prefix}aws-ro",
+              "access-mcp",
+              "${var.resource_prefix}aws-console",
               "${var.resource_prefix}postgresql",
               "${var.resource_prefix}k8s",
               "${var.resource_prefix}vnet",
@@ -29,7 +30,7 @@ resource "kubectl_manifest" "sso_okta" {
         ]
         audience                = "https://${local.teleport_cluster_fqdn}:443/v1/webapi/saml/acs/okta"
         display                 = "Okta"
-        entity_descriptor_url   = "${var.okta_entity_descriptor_url}"
+        entity_descriptor_url   = var.okta_entity_descriptor_url
         service_provider_issuer = "https://${local.teleport_cluster_fqdn}:443/v1/webapi/saml/acs/okta"
       }
     }

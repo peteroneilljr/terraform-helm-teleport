@@ -1,6 +1,6 @@
 // DynamoDB table for storing cluster state
 resource "aws_dynamodb_table" "teleport_backend" {
-  name           = "${var.resource_prefix}${local.teleport_cluster_name}-backend"
+  name           = "${local.teleport_cluster_name}-backend"
   read_capacity  = 10
   write_capacity = 10
   hash_key       = "HashKey"
@@ -44,7 +44,7 @@ resource "aws_dynamodb_table" "teleport_backend" {
 
 // DynamoDB table for storing cluster events
 resource "aws_dynamodb_table" "teleport_events" {
-  name           = "${var.resource_prefix}${local.teleport_cluster_name}-events"
+  name           = "${local.teleport_cluster_name}-events"
   read_capacity  = 10
   write_capacity = 10
   hash_key       = "SessionID"
@@ -103,7 +103,7 @@ resource "aws_dynamodb_table" "teleport_events" {
 }
 
 resource "aws_s3_bucket" "teleport_sessions" {
-  bucket        = "${var.resource_prefix}${local.teleport_cluster_name}-sessions"
+  bucket        = "${local.teleport_cluster_name}-sessions"
   force_destroy = true
 
   # Prevents Terraform from destroying backend on name change

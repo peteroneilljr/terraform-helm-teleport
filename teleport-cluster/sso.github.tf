@@ -42,7 +42,7 @@ resource "kubectl_manifest" "sso_github" {
             organization = "peteroneilljr-org"
             team         = "operators"
             roles = [
-              "${var.resource_prefix}aws-ro",
+              "${var.resource_prefix}aws-console",
               "${var.resource_prefix}postgresql",
               "${var.resource_prefix}k8s",
               "${var.resource_prefix}vnet",

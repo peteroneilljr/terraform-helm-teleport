@@ -76,6 +76,13 @@ apps:
     labels:
       env: dev
       host: k8s
+  - name: argocd
+    uri: https://argocd-server.argocd.svc.cluster.local
+    insecure_skip_verify: true
+    labels:
+      env: dev
+      host: k8s
+      app: argocd
   - name: awsconsole
     uri: "https://console.aws.amazon.com/"
     labels:

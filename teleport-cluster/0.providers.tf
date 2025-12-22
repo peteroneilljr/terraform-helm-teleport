@@ -32,22 +32,17 @@ provider "aws" {
   }
 }
 
-locals {
-  config_path    = var.k8s_config_path
-  config_context = var.k8s_config_context
-}
-
 provider "helm" {
   kubernetes = {
-    config_path    = local.config_path
-    config_context = local.config_context
+    config_path    = var.k8s_config_path
+    config_context = var.k8s_config_context
   }
 }
 provider "kubernetes" {
-  config_path    = local.config_path
-  config_context = local.config_context
+  config_path    = var.k8s_config_path
+  config_context = var.k8s_config_context
 }
 provider "kubectl" {
-  config_path    = local.config_path
-  config_context = local.config_context
+  config_path    = var.k8s_config_path
+  config_context = var.k8s_config_context
 }

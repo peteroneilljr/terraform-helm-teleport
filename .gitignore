@@ -38,3 +38,6 @@ terraform.rc
 /Archive
 teleport-cluster/.terraform.lock.hcl
 teleport-cluster/license.pem
+.DS_Store
+*.pkg
+teleport-cluster/plan
