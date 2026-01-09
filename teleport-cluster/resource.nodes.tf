@@ -42,9 +42,10 @@ locals {
   
   teleport_yum_entrypoint_sh = <<-EOT
     yum update -y && \
-    URL="https://${local.teleport_cluster_fqdn}/scripts/install.sh"; \
-    for i in {1..60}; do curl "$URL" >/dev/null && break || \
-    sleep 5; done && curl "$URL" | bash && \
+    curl https://cdn.teleport.dev/teleport-update-v${var.teleport_version}-linux-amd64-bin.tar.gz --output teleport-update-${var.teleport_version}.tgz && \
+    tar xf teleport-update-${var.teleport_version}.tgz && \
+    cd ./teleport && \
+    ./teleport-update enable --proxy ${local.teleport_cluster_fqdn} && \
     /usr/local/bin/teleport start --roles=node --auth-server=${local.teleport_cluster_fqdn}:443 --token=${random_string.teleport_node_token.result} --nodename=rockylinux
   EOT
 }
