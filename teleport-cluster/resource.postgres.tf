@@ -125,6 +125,10 @@ auth:
   database: teleport_db
 
 primary:
+  persistence:
+      enabled: false
+  shmVolume:
+    enabled: true
   extraFlags:
     - "-c ssl=on"
     - "-c ssl_ca_file=/opt/bitnami/postgresql/certs/ca.crt"
