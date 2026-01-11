@@ -66,9 +66,14 @@ extraVolumes:
 - name: postgres-ca
   secret:
     secretName: ${kubernetes_secret.postgres_tls.metadata[0].name}
+- name: mysql-ca
+  secret:
+    secretName: ${kubernetes_secret.mysql_tls.metadata[0].name}
 extraVolumeMounts:
 - name: postgres-ca
   mountPath: /var/lib/postgresql/tls
+- name: mysql-ca
+  mountPath: /var/lib/mysql/tls
 apps:
   - name: grafana
     public_addr: "grafana.${local.teleport_cluster_fqdn}"
@@ -100,6 +105,15 @@ databases:
       db: postgres
     tls:
       ca_cert_file: /var/lib/postgresql/tls/ca.crt
+  - name: mysql
+    uri: ${helm_release.mysql.name}.${helm_release.mysql.namespace}.svc.cluster.local:3306
+    protocol: mysql
+    static_labels:
+      env: dev
+      host: k8s
+      db: mysql
+    tls:
+      ca_cert_file: /var/lib/mysql/tls/ca.crt
 EOF
   ]
 }
