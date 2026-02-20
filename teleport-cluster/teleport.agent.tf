@@ -65,10 +65,10 @@ highAvailability:
 extraVolumes:
 - name: postgres-ca
   secret:
-    secretName: ${kubernetes_secret.postgres_tls.metadata[0].name}
+    secretName: ${module.postgres_tls.secret_name}
 - name: mysql-ca
   secret:
-    secretName: ${kubernetes_secret.mysql_tls.metadata[0].name}
+    secretName: ${module.mysql_tls.secret_name}
 extraVolumeMounts:
 - name: postgres-ca
   mountPath: /var/lib/postgresql/tls

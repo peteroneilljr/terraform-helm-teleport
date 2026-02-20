@@ -1,78 +1,43 @@
-# Step 1: Create a custom Certificate Authority (CA)
-resource "tls_private_key" "ca_key" {
-  algorithm = "RSA"
-  rsa_bits  = 2048
-}
-
-resource "tls_self_signed_cert" "ca_cert" {
-  private_key_pem = tls_private_key.ca_key.private_key_pem
-
-  subject {
-    common_name  = "Custom PostgreSQL CA"
-    organization = "Terraform CA"
-  }
-
-  is_ca_certificate     = true
-  validity_period_hours = 87600 # 10 years
-  allowed_uses = [
-    "cert_signing",
-    "key_encipherment",
-    "digital_signature",
-  ]
-}
-
-# Step 2: Generate a server private key and CSR
-resource "tls_private_key" "server_key" {
-  algorithm = "RSA"
-  rsa_bits  = 2048
-}
-
-resource "tls_cert_request" "server_csr" {
-  private_key_pem = tls_private_key.server_key.private_key_pem
-
-  subject {
-    common_name  = "developer"
-    organization = "Terraform Server"
-  }
-
+module "postgres_tls" {
+  source             = "./module/db_tls"
+  name               = "${var.resource_prefix}postgresql-tls"
+  namespace          = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
+  ca_common_name     = "Custom PostgreSQL CA"
   dns_names = [
     "${var.resource_prefix}postgres-postgresql.${kubernetes_namespace_v1.teleport_cluster.metadata[0].name}",
     "${var.resource_prefix}postgres-postgresql.${kubernetes_namespace_v1.teleport_cluster.metadata[0].name}.svc.cluster.local"
   ]
+  teleport_db_ca_pem = data.http.teleport_db_ca.response_body
 }
 
-# Step 3: Sign the server certificate with the CA
-resource "tls_locally_signed_cert" "server_cert" {
-  cert_request_pem   = tls_cert_request.server_csr.cert_request_pem
-  ca_private_key_pem = tls_private_key.ca_key.private_key_pem
-  ca_cert_pem        = tls_self_signed_cert.ca_cert.cert_pem
-
-  validity_period_hours = 8760 # 1 year
-  allowed_uses = [
-    "client_auth",
-    "key_encipherment",
-    "digital_signature",
-    "server_auth",
-  ]
+moved {
+  from = tls_private_key.ca_key
+  to   = module.postgres_tls.tls_private_key.ca
 }
 
-# Step 4: Create Kubernetes TLS secret with certs
-resource "kubernetes_secret" "postgres_tls" {
-  metadata {
-    name      = "${var.resource_prefix}postgresql-tls"
-    namespace = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
-  }
+moved {
+  from = tls_self_signed_cert.ca_cert
+  to   = module.postgres_tls.tls_self_signed_cert.ca
+}
 
-  data = {
-    "ca.crt"  = <<EOF
-${tls_self_signed_cert.ca_cert.cert_pem}
-${data.http.teleport_db_ca.response_body}
-    EOF
-    "tls.crt" = tls_locally_signed_cert.server_cert.cert_pem
-    "tls.key" = tls_private_key.server_key.private_key_pem
-  }
+moved {
+  from = tls_private_key.server_key
+  to   = module.postgres_tls.tls_private_key.server
+}
 
-  type = "Opaque"
+moved {
+  from = tls_cert_request.server_csr
+  to   = module.postgres_tls.tls_cert_request.server
+}
+
+moved {
+  from = tls_locally_signed_cert.server_cert
+  to   = module.postgres_tls.tls_locally_signed_cert.server
+}
+
+moved {
+  from = kubernetes_secret.postgres_tls
+  to   = module.postgres_tls.kubernetes_secret.this
 }
 
 # Step 6: ConfigMap for PostgreSQL init script (auto-provisioning setup)
@@ -242,7 +207,7 @@ volumePermissions:
 tls:
   enabled: true
   preferServerCiphers: true
-  certificatesSecret: ${kubernetes_secret.postgres_tls.metadata[0].name}
+  certificatesSecret: ${module.postgres_tls.secret_name}
   certFilename: tls.crt
   certKeyFilename: tls.key
   certCAFilename: ca.crt

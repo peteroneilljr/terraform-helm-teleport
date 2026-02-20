@@ -1,78 +1,43 @@
-# Step 1: Create a custom Certificate Authority (CA) for MySQL
-resource "tls_private_key" "mysql_ca_key" {
-  algorithm = "RSA"
-  rsa_bits  = 2048
-}
-
-resource "tls_self_signed_cert" "mysql_ca_cert" {
-  private_key_pem = tls_private_key.mysql_ca_key.private_key_pem
-
-  subject {
-    common_name  = "Custom MySQL CA"
-    organization = "Terraform CA"
-  }
-
-  is_ca_certificate     = true
-  validity_period_hours = 87600
-  allowed_uses = [
-    "cert_signing",
-    "key_encipherment",
-    "digital_signature",
-  ]
-}
-
-# Step 2: Generate a server private key and CSR for MySQL
-resource "tls_private_key" "mysql_server_key" {
-  algorithm = "RSA"
-  rsa_bits  = 2048
-}
-
-resource "tls_cert_request" "mysql_server_csr" {
-  private_key_pem = tls_private_key.mysql_server_key.private_key_pem
-
-  subject {
-    common_name  = "developer"
-    organization = "Terraform Server"
-  }
-
+module "mysql_tls" {
+  source             = "./module/db_tls"
+  name               = "${var.resource_prefix}mysql-tls"
+  namespace          = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
+  ca_common_name     = "Custom MySQL CA"
   dns_names = [
     "${var.resource_prefix}mysql.${kubernetes_namespace_v1.teleport_cluster.metadata[0].name}",
     "${var.resource_prefix}mysql.${kubernetes_namespace_v1.teleport_cluster.metadata[0].name}.svc.cluster.local"
   ]
+  teleport_db_ca_pem = data.http.teleport_db_ca.response_body
 }
 
-# Step 3: Sign the MySQL server certificate
-resource "tls_locally_signed_cert" "mysql_server_cert" {
-  cert_request_pem   = tls_cert_request.mysql_server_csr.cert_request_pem
-  ca_private_key_pem = tls_private_key.mysql_ca_key.private_key_pem
-  ca_cert_pem        = tls_self_signed_cert.mysql_ca_cert.cert_pem
-
-  validity_period_hours = 8760
-  allowed_uses = [
-    "client_auth",
-    "key_encipherment",
-    "digital_signature",
-    "server_auth",
-  ]
+moved {
+  from = tls_private_key.mysql_ca_key
+  to   = module.mysql_tls.tls_private_key.ca
 }
 
-# Step 4: Create Kubernetes TLS secret for MySQL
-resource "kubernetes_secret" "mysql_tls" {
-  metadata {
-    name      = "${var.resource_prefix}mysql-tls"
-    namespace = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
-  }
+moved {
+  from = tls_self_signed_cert.mysql_ca_cert
+  to   = module.mysql_tls.tls_self_signed_cert.ca
+}
 
-  data = {
-    "ca.crt"  = <<EOF
-${tls_self_signed_cert.mysql_ca_cert.cert_pem}
-${data.http.teleport_db_ca.response_body}
-    EOF
-    "tls.crt" = tls_locally_signed_cert.mysql_server_cert.cert_pem
-    "tls.key" = tls_private_key.mysql_server_key.private_key_pem
-  }
+moved {
+  from = tls_private_key.mysql_server_key
+  to   = module.mysql_tls.tls_private_key.server
+}
 
-  type = "Opaque"
+moved {
+  from = tls_cert_request.mysql_server_csr
+  to   = module.mysql_tls.tls_cert_request.server
+}
+
+moved {
+  from = tls_locally_signed_cert.mysql_server_cert
+  to   = module.mysql_tls.tls_locally_signed_cert.server
+}
+
+moved {
+  from = kubernetes_secret.mysql_tls
+  to   = module.mysql_tls.kubernetes_secret.this
 }
 
 resource "kubernetes_config_map" "mysql_custom_init" {
@@ -125,7 +90,7 @@ auth:
   password: changeme
 tls:
   enabled: true
-  existingSecret: ${kubernetes_secret.mysql_tls.metadata[0].name}
+  existingSecret: ${module.mysql_tls.secret_name}
   certFilename: tls.crt
   certKeyFilename: tls.key
   certCAFilename: ca.crt
