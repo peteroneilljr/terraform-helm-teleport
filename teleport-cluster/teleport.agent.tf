@@ -69,11 +69,16 @@ extraVolumes:
 - name: mysql-ca
   secret:
     secretName: ${module.mysql_tls.secret_name}
+- name: mariadb-ca
+  secret:
+    secretName: ${module.mariadb_tls.secret_name}
 extraVolumeMounts:
 - name: postgres-ca
   mountPath: /var/lib/postgresql/tls
 - name: mysql-ca
   mountPath: /var/lib/mysql/tls
+- name: mariadb-ca
+  mountPath: /var/lib/mariadb/tls
 apps:
   - name: grafana
     public_addr: "grafana.${local.teleport_cluster_fqdn}"
@@ -122,6 +127,17 @@ databases:
       db: mysql
     tls:
       ca_cert_file: /var/lib/mysql/tls/ca.crt
+  - name: mariadb
+    uri: ${helm_release.mariadb.name}.${helm_release.mariadb.namespace}.svc.cluster.local:3306
+    protocol: mysql
+    admin_user:
+      name: teleport-admin
+    static_labels:
+      env: dev
+      host: k8s
+      db: mariadb
+    tls:
+      ca_cert_file: /var/lib/mariadb/tls/ca.crt
 EOF
   ]
 }
