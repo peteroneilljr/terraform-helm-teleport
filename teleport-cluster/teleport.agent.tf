@@ -114,6 +114,8 @@ databases:
   - name: mysql
     uri: ${helm_release.mysql.name}.${helm_release.mysql.namespace}.svc.cluster.local:3306
     protocol: mysql
+    admin_user:
+      name: teleport-admin
     static_labels:
       env: dev
       host: k8s
