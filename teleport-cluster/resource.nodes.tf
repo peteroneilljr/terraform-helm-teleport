@@ -30,13 +30,22 @@ resource "kubectl_manifest" "teleport_node_token" {
   ]
 }
 
-locals { 
-  teleport_apt_managed_updates_entrypoint_sh = <<-EOT
-    apt-get update && \
-    apt-get install -y curl && \
+locals {
+  teleport_pacman_managed_updates_entrypoint_sh = <<-EOT
+    pacman -Syu sudo --noconfirm && \
     ${local.teleport_managed_updates_entrypoint_sh}
   EOT
-  teleport_managed_updates_entrypoint_sh = <<-EOT
+  teleport_apt_managed_updates_entrypoint_sh    = <<-EOT
+    apt-get update && \
+    apt-get install -y curl sudo && \
+    ${local.teleport_managed_updates_entrypoint_sh}
+  EOT
+  teleport_dnf_managed_updates_entrypoint_sh    = <<-EOT
+    dnf update -y && \
+    dnf install -y sudo && \
+    ${local.teleport_managed_updates_entrypoint_sh}
+  EOT
+  teleport_managed_updates_entrypoint_sh        = <<-EOT
     curl -o teleport-update.tgz https://cdn.teleport.dev/teleport-update-v${var.teleport_version}-linux-amd64-bin.tar.gz && \
     tar xf teleport-update.tgz && cd ./teleport && \
     ./teleport-update enable --proxy ${local.teleport_cluster_fqdn} && \
@@ -54,7 +63,7 @@ module "teleport_nodes" {
       namespace = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
       image     = "rockylinux:9"
       command   = ["/bin/bash", "-c"]
-      args      = [local.teleport_managed_updates_entrypoint_sh]
+      args      = [local.teleport_dnf_managed_updates_entrypoint_sh]
     }
 
     rocky8 = {
@@ -62,7 +71,23 @@ module "teleport_nodes" {
       namespace = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
       image     = "rockylinux:8"
       command   = ["/bin/bash", "-c"]
-      args      = [local.teleport_managed_updates_entrypoint_sh]
+      args      = [local.teleport_dnf_managed_updates_entrypoint_sh]
+    }
+
+    fedora43 = {
+      name      = "fedora43"
+      namespace = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
+      image     = "fedora:43"
+      command   = ["/bin/bash", "-c"]
+      args      = [local.teleport_dnf_managed_updates_entrypoint_sh]
+    }
+
+    fedora42 = {
+      name      = "fedora42"
+      namespace = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
+      image     = "fedora:42"
+      command   = ["/bin/bash", "-c"]
+      args      = [local.teleport_dnf_managed_updates_entrypoint_sh]
     }
 
     ubuntu2404 = {
@@ -89,22 +114,6 @@ module "teleport_nodes" {
       args      = [local.teleport_apt_managed_updates_entrypoint_sh]
     }
 
-    centos7 = {
-      name      = "centos7"
-      namespace = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
-      image     = "centos:7"
-      command   = ["/bin/bash", "-c"]
-      args      = [local.teleport_managed_updates_entrypoint_sh]
-    }
-
-    centos8 = {
-      name      = "centos8"
-      namespace = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
-      image     = "centos:8"
-      command   = ["/bin/bash", "-c"]
-      args      = [local.teleport_managed_updates_entrypoint_sh]
-    }
-
     debian11 = {
       name      = "debian11"
       namespace = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
@@ -113,12 +122,20 @@ module "teleport_nodes" {
       args      = [local.teleport_apt_managed_updates_entrypoint_sh]
     }
 
-    debian13 = {
-      name      = "debian13"
+    debian12 = {
+      name      = "debian12"
       namespace = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
-      image     = "debian:13"
+      image     = "debian:12"
       command   = ["/bin/bash", "-c"]
       args      = [local.teleport_apt_managed_updates_entrypoint_sh]
+    }
+
+    archlinux = {
+      name      = "archlinux"
+      namespace = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
+      image     = "archlinux:latest"
+      command   = ["/bin/bash", "-c"]
+      args      = [local.teleport_pacman_managed_updates_entrypoint_sh]
     }
   }
 

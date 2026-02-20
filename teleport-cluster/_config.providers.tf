@@ -6,7 +6,7 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = "3.0.0-pre2"
+      version = "~> 3.0.0"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -14,8 +14,12 @@ terraform {
     }
     kubectl = {
       source  = "gavinbunney/kubectl"
-      version = "1.19.0"
+      version = "~> 1.19.0"
     }
+    # teleport = {
+    #   source  = "terraform.releases.teleport.dev/gravitational/teleport"
+    #   version = "> 18.0"
+    # }
   }
 
 }

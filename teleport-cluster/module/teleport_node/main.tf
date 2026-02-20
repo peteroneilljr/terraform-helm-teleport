@@ -36,6 +36,14 @@ resource "kubernetes_deployment" "this" {
           command = lookup(each.value, "command", ["/bin/sh", "-c"])
           args    = lookup(each.value, "args", [])
 
+          dynamic "env" {
+            for_each = lookup(each.value, "container_env", {})
+            content {
+              name  = env.key
+              value = env.value
+            }
+          }
+
         }
       }
     }

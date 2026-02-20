@@ -111,6 +111,72 @@ resource "aws_iam_role_policy_attachment" "irsa_aws_console_admin_policy" {
   policy_arn = aws_iam_policy.irsa_aws_console_sts_admin.arn
 }
 
+# ---------------------------------------------------------------------------- #
+# Bedrock Read Only Role
+# ---------------------------------------------------------------------------- #
+resource "aws_iam_role" "irsa_aws_console_bedrock_ro" {
+  name               = "${var.resource_prefix}aws-bedrock-ro"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "AWS": "${aws_iam_role.irsa_aws_console.arn}"
+      }
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_policy" "irsa_aws_console_bedrock_ro" {
+  name = "${local.teleport_cluster_name}-aws-console-bedrock-ro"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:List*",
+        "bedrock:Get*",
+        "sagemaker:List*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "irsa_aws_console_bedrock_ro" {
+  role       = aws_iam_role.irsa_aws_console_bedrock_ro.name
+  policy_arn = aws_iam_policy.irsa_aws_console_bedrock_ro.arn
+}
+
+resource "aws_iam_policy" "irsa_aws_console_sts_bedrock_ro" {
+  name = "${local.teleport_cluster_name}-aws-console-sts-bedrock-ro"
+
+  policy = <<EOF
+{ "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "${aws_iam_role.irsa_aws_console_bedrock_ro.arn}"
+    }
+  ]
+}
+EOF
+}
+resource "aws_iam_role_policy_attachment" "irsa_aws_console_bedrock_ro_policy" {
+  role       = aws_iam_role.irsa_aws_console.name
+  policy_arn = aws_iam_policy.irsa_aws_console_sts_bedrock_ro.arn
+}
 
 # ---------------------------------------------------------------------------- #
 # Teleport Role
@@ -134,5 +200,26 @@ spec:
     aws_role_arns:
       - ${aws_iam_role.irsa_aws_console_ro.arn}
       - ${aws_iam_role.irsa_aws_console_admin.arn}
+EOF
+}
+
+resource "kubectl_manifest" "teleport_role_aws_bedrock_ro" {
+  yaml_body = <<EOF
+apiVersion: resources.teleport.dev/v1
+kind: TeleportRoleV7
+metadata:
+  annotations:
+    teleport.dev/keep: "true"
+  finalizers:
+    - resources.teleport.dev/deletion
+  generation: 1
+  name: "${var.resource_prefix}aws-bedrock-ro"
+  namespace: ${helm_release.teleport_cluster.namespace}
+spec:
+  allow:
+    app_labels:
+      app: aws
+    aws_role_arns:
+      - ${aws_iam_role.irsa_aws_console_bedrock_ro.arn}
 EOF
 }

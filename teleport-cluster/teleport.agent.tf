@@ -94,11 +94,17 @@ apps:
       env: dev
       host: k8s
       app: aws
+  - name: awsconsole-bedrock
+    uri: "https://console.aws.amazon.com/bedrock"
+    labels:
+      app: bedrock
 
 databases:
   - name: postgres
     uri: ${helm_release.postgresql.name}-postgresql.${helm_release.postgresql.namespace}.svc.cluster.local:5432
     protocol: postgres
+    admin_user:
+      name: teleport-admin
     static_labels:
       env: dev
       host: k8s
@@ -117,11 +123,3 @@ databases:
 EOF
   ]
 }
-
-  # - name: vnet-name-generator
-  #   uri: tcp://${kubernetes_service.name_generator.metadata[0].name}.${helm_release.grafana.namespace}.svc.cluster.local:80
-  #   public_addr: "vnet-name-generator.${local.teleport_cluster_fqdn}"
-  #   labels:
-  #     env: dev
-  #     host: k8s
-  #     app: vnet

@@ -94,3 +94,14 @@ variable "k8s_config_context" {
   default     = null
   description = "Context in the Kubeconfig to use"
 }
+# ---------------------------------------------------------------------------- #
+# Google SAML Vars
+# ---------------------------------------------------------------------------- #
+variable "google_acs" {
+  type        = string
+  description = "Google ACS URL"
+}
+variable "google_entity_descriptor" {
+  type        = string
+  description = "Google Entity Descriptor URL"
+}

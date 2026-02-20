@@ -1,6 +1,6 @@
 resource "helm_release" "grafana" {
   name       = "${var.resource_prefix}grafana"
-  namespace  = kubernetes_namespace_v1.teleport_cluster.metadata[0].name
+  namespace  = kubernetes_namespace_v1.teleport_cluster.metadata.0.name
   repository = "https://grafana.github.io/helm-charts"
   chart      = "grafana"
   version    = "9.2.6"
@@ -23,4 +23,3 @@ resource "helm_release" "grafana" {
   EOF
   ]
 }
-
