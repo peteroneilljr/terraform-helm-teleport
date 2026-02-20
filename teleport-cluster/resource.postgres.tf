@@ -224,27 +224,28 @@ EOF
 # Teleport Role
 # ---------------------------------------------------------------------------- #
 resource "kubectl_manifest" "teleport_role_postgresql" {
-  yaml_body = <<EOF
-apiVersion: resources.teleport.dev/v1
-kind: TeleportRoleV7
-metadata:
-  annotations:
-    teleport.dev/keep: "true"
-  finalizers:
-    - resources.teleport.dev/deletion
-  name: "${var.resource_prefix}postgresql"
-  namespace: ${helm_release.teleport_cluster.namespace}
-spec:
-  options:
-    create_db_user_mode: keep
-  allow:
-    db_labels:
-      db: postgres
-    db_names:
-      - "teleport_db"
-      - "*"
-    db_roles:
-      - "admin"
-      - "read_only"
-    EOF
+  yaml_body = yamlencode({
+    apiVersion = "resources.teleport.dev/v1"
+    kind       = "TeleportRoleV7"
+    metadata = {
+      annotations = {
+        "teleport.dev/keep" = "true"
+      }
+      finalizers = ["resources.teleport.dev/deletion"]
+      name       = "${var.resource_prefix}postgresql"
+      namespace  = helm_release.teleport_cluster.namespace
+    }
+    spec = {
+      options = {
+        create_db_user_mode = "keep"
+      }
+      allow = {
+        db_labels = {
+          db = "postgres"
+        }
+        db_names = ["teleport_db", "*"]
+        db_roles = ["admin", "read_only"]
+      }
+    }
+  })
 }

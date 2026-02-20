@@ -88,27 +88,32 @@ resource "helm_release" "teleport_cluster" {
 # Teleport Role
 # ---------------------------------------------------------------------------- #
 resource "kubectl_manifest" "teleport_role_k8s" {
-  yaml_body = <<EOF
-apiVersion: resources.teleport.dev/v1
-kind: TeleportRoleV7
-metadata:
-  annotations:
-    teleport.dev/keep: "true"
-  finalizers:
-    - resources.teleport.dev/deletion
-  name: "${var.resource_prefix}k8s"
-  namespace: ${helm_release.teleport_cluster.namespace}
-spec:
-  allow:
-    kubernetes_groups:
-    - system:masters
-    kubernetes_labels:
-      '*': '*'
-    kubernetes_resources:
-    - kind: '*'
-      name: '*'
-      namespace: '*'
-      verbs:
-      - '*'
-    EOF
+  yaml_body = yamlencode({
+    apiVersion = "resources.teleport.dev/v1"
+    kind       = "TeleportRoleV7"
+    metadata = {
+      annotations = {
+        "teleport.dev/keep" = "true"
+      }
+      finalizers = ["resources.teleport.dev/deletion"]
+      name       = "${var.resource_prefix}k8s"
+      namespace  = helm_release.teleport_cluster.namespace
+    }
+    spec = {
+      allow = {
+        kubernetes_groups = ["system:masters"]
+        kubernetes_labels = {
+          "*" = "*"
+        }
+        kubernetes_resources = [
+          {
+            kind      = "*"
+            name      = "*"
+            namespace = "*"
+            verbs     = ["*"]
+          }
+        ]
+      }
+    }
+  })
 }

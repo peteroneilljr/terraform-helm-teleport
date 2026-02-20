@@ -182,44 +182,54 @@ resource "aws_iam_role_policy_attachment" "irsa_aws_console_bedrock_ro_policy" {
 # Teleport Role
 # ---------------------------------------------------------------------------- #
 resource "kubectl_manifest" "teleport_role_aws_console" {
-  yaml_body = <<EOF
-apiVersion: resources.teleport.dev/v1
-kind: TeleportRoleV7
-metadata:
-  annotations:
-    teleport.dev/keep: "true"
-  finalizers:
-    - resources.teleport.dev/deletion
-  generation: 1
-  name: "${var.resource_prefix}aws-console"
-  namespace: ${helm_release.teleport_cluster.namespace}
-spec:
-  allow:
-    app_labels:
-      app: aws
-    aws_role_arns:
-      - ${aws_iam_role.irsa_aws_console_ro.arn}
-      - ${aws_iam_role.irsa_aws_console_admin.arn}
-EOF
+  yaml_body = yamlencode({
+    apiVersion = "resources.teleport.dev/v1"
+    kind       = "TeleportRoleV7"
+    metadata = {
+      annotations = {
+        "teleport.dev/keep" = "true"
+      }
+      finalizers = ["resources.teleport.dev/deletion"]
+      generation = 1
+      name       = "${var.resource_prefix}aws-console"
+      namespace  = helm_release.teleport_cluster.namespace
+    }
+    spec = {
+      allow = {
+        app_labels = {
+          app = "aws"
+        }
+        aws_role_arns = [
+          aws_iam_role.irsa_aws_console_ro.arn,
+          aws_iam_role.irsa_aws_console_admin.arn,
+        ]
+      }
+    }
+  })
 }
 
 resource "kubectl_manifest" "teleport_role_aws_bedrock_ro" {
-  yaml_body = <<EOF
-apiVersion: resources.teleport.dev/v1
-kind: TeleportRoleV7
-metadata:
-  annotations:
-    teleport.dev/keep: "true"
-  finalizers:
-    - resources.teleport.dev/deletion
-  generation: 1
-  name: "${var.resource_prefix}aws-bedrock-ro"
-  namespace: ${helm_release.teleport_cluster.namespace}
-spec:
-  allow:
-    app_labels:
-      app: aws
-    aws_role_arns:
-      - ${aws_iam_role.irsa_aws_console_bedrock_ro.arn}
-EOF
+  yaml_body = yamlencode({
+    apiVersion = "resources.teleport.dev/v1"
+    kind       = "TeleportRoleV7"
+    metadata = {
+      annotations = {
+        "teleport.dev/keep" = "true"
+      }
+      finalizers = ["resources.teleport.dev/deletion"]
+      generation = 1
+      name       = "${var.resource_prefix}aws-bedrock-ro"
+      namespace  = helm_release.teleport_cluster.namespace
+    }
+    spec = {
+      allow = {
+        app_labels = {
+          app = "aws"
+        }
+        aws_role_arns = [
+          aws_iam_role.irsa_aws_console_bedrock_ro.arn,
+        ]
+      }
+    }
+  })
 }

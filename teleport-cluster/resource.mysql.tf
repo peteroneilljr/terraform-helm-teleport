@@ -203,23 +203,24 @@ EOF
 # Teleport Role for MySQL
 # ---------------------------------------------------------------------------- #
 resource "kubectl_manifest" "teleport_role_mysql" {
-  yaml_body = <<EOF
-apiVersion: resources.teleport.dev/v1
-kind: TeleportRoleV7
-metadata:
-  name: "${var.resource_prefix}mysql"
-  namespace: ${helm_release.teleport_cluster.namespace}
-spec:
-  options:
-    create_db_user_mode: keep
-  allow:
-    db_labels:
-      db: mysql
-    db_names:
-      - "teleport_db"
-      - "*"
-    db_roles:
-      - "admin"
-      - "read_only"
-EOF
+  yaml_body = yamlencode({
+    apiVersion = "resources.teleport.dev/v1"
+    kind       = "TeleportRoleV7"
+    metadata = {
+      name      = "${var.resource_prefix}mysql"
+      namespace = helm_release.teleport_cluster.namespace
+    }
+    spec = {
+      options = {
+        create_db_user_mode = "keep"
+      }
+      allow = {
+        db_labels = {
+          db = "mysql"
+        }
+        db_names = ["teleport_db", "*"]
+        db_roles = ["admin", "read_only"]
+      }
+    }
+  })
 }
