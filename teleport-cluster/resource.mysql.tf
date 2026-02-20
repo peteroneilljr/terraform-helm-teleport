@@ -10,36 +10,6 @@ module "mysql_tls" {
   teleport_db_ca_pem = data.http.teleport_db_ca.response_body
 }
 
-moved {
-  from = tls_private_key.mysql_ca_key
-  to   = module.mysql_tls.tls_private_key.ca
-}
-
-moved {
-  from = tls_self_signed_cert.mysql_ca_cert
-  to   = module.mysql_tls.tls_self_signed_cert.ca
-}
-
-moved {
-  from = tls_private_key.mysql_server_key
-  to   = module.mysql_tls.tls_private_key.server
-}
-
-moved {
-  from = tls_cert_request.mysql_server_csr
-  to   = module.mysql_tls.tls_cert_request.server
-}
-
-moved {
-  from = tls_locally_signed_cert.mysql_server_cert
-  to   = module.mysql_tls.tls_locally_signed_cert.server
-}
-
-moved {
-  from = kubernetes_secret.mysql_tls
-  to   = module.mysql_tls.kubernetes_secret.this
-}
-
 resource "kubernetes_config_map" "mysql_custom_init" {
   metadata {
     name      = "${var.resource_prefix}mysql-custom-init"

@@ -10,36 +10,6 @@ module "postgres_tls" {
   teleport_db_ca_pem = data.http.teleport_db_ca.response_body
 }
 
-moved {
-  from = tls_private_key.ca_key
-  to   = module.postgres_tls.tls_private_key.ca
-}
-
-moved {
-  from = tls_self_signed_cert.ca_cert
-  to   = module.postgres_tls.tls_self_signed_cert.ca
-}
-
-moved {
-  from = tls_private_key.server_key
-  to   = module.postgres_tls.tls_private_key.server
-}
-
-moved {
-  from = tls_cert_request.server_csr
-  to   = module.postgres_tls.tls_cert_request.server
-}
-
-moved {
-  from = tls_locally_signed_cert.server_cert
-  to   = module.postgres_tls.tls_locally_signed_cert.server
-}
-
-moved {
-  from = kubernetes_secret.postgres_tls
-  to   = module.postgres_tls.kubernetes_secret.this
-}
-
 # Step 6: ConfigMap for PostgreSQL init script (auto-provisioning setup)
 resource "kubernetes_config_map" "postgres_custom_init" {
   metadata {
